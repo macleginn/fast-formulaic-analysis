@@ -2,7 +2,7 @@ fast-formulaic-analysis
 =======================
 
 A program for finding formulas in poetic texts and calculating formulaic density. Essentially, it an incomparably faster
-and more correct version of [this program](github.com/macleginn/poetic-formula-extractor-python).
+and more correct version of [this program](http://github.com/macleginn/poetic-formula-extractor-python).
 There is a deep seated bug in the old version, but I keep it here since it was used in the presentation.
 The usage is nearly identical except that now the algorithm takes the file object as input:
 
