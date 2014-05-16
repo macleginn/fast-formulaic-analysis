@@ -10,6 +10,6 @@ The usage is nearly identical except that now the algorithm takes a file object 
 with open("texts/Iliad.txt", "r", encoding = "utf-8") as inp:
    poem = Poem(inp, HOMERIC_GREEK_ALPHABET, EMPTY_STOPLIST)
 print(round(poem.getFormulaicDensity(), 1))
-print(poem.returnFormulasAsString()
+print(poem.returnFormulasAsString())
 poem.highlightFormulas("Iliad_highlited.html")
 ```
