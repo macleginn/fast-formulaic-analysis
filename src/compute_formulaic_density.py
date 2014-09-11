@@ -71,6 +71,7 @@ except FileNotFoundError:
 # Computing formulaic density and presenting the results
 
 poem = Poem(file_with_text, ALPHABET, STOP_LIST)
+file_with_text.close()
 print(round(poem.getFormulaicDensity(), 1))
 if show_formulas_on_screen:
 	print(poem.returnFormulasAsString())
