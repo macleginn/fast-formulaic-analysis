@@ -1,10 +1,6 @@
-import sys
-import os
-import os.path
-from time import time
-from random import randint
+import re
 
-# Supplementary data used in the analysis.
+# Supplementary data used in the testing code.
 
 RUSSIAN_ALPHABET      = {'ё', 'я', 'ю', 'э', 'ь', 'ы', 'ъ', 'щ', 'ш', 'ч', 'ц', 'х', 'ф', 'у', 'т', 'с', 'р', 'п', 'о', 'н', 'м', 'л', 'к', 'й', 'и', 'з', 'ж', 'е', 'д', 'г', 'в', 'б', 'а', 'Я', 'Ю', 'Э', 'Ь', 'Ы', 'Ъ', 'Щ', 'Ш', 'Ч', 'Ц', 'Х', 'Ф', 'У', 'Т', 'С', 'Р', 'П', 'О', 'Н', 'М', 'Л', 'К', 'Й', 'И', 'З', 'Ж', 'Е', 'Д', 'Г', 'В', 'Б', 'А', 'Ё'}
 RUSSIAN_STOP_LIST     = {'а', 'б', 'бы', 'в', 'вас', 'во', 'все', 'всё', 'вы', 'где', 'да', 'дак', 'для', 'до', 'его', 'ей', 'ему', 'если', 'ж', 'же', 'за', 'и', 'из', 'им', 'их', 'ише', 'к', 'как', 'ко', 'когда', 'кого', 'кому', 'ли', 'меж', 'между', 'меня', 'мне', 'мной', 'мня', 'моей', 'мой', 'моя', 'мы', 'на', 'надо', 'нас', 'наш' , 'не', 'ней', 'нем', 'ни', 'ним', 'но', 'о', 'об', 'обо' , 'он', 'она', 'они', 'от', 'перед', 'передо' , 'по', 'под', 'при', 'про', 'с', 'сам', 'со' , 'тебе', 'тебя', 'тем', 'тех', 'то', 'тогда', 'той', 'тот', 'тут' , 'ты', 'тя', 'у' 'уж', 'чем', 'что', 'я'}
@@ -34,11 +30,14 @@ def extractPWords(line, alphabet):
             pWordArr.append(PoeticWord(word))
     return pWordArr
 
-def makeKey(nGram):
+def makeKey(nGram, keylength):
     key = []
-    for word in nGram.pwords:
-        key.append(word.word.lower())
-        # key.append(word.word.lower()[0:4])
+    if keylength <= 0:
+        for word in nGram.pwords:
+            key.append(word.word.lower())
+    else:
+        for word in nGram.pwords:
+            key.append(word.word.lower()[0:keylength])
     return "".join(key)
 
 def makeNGrams(lineArr, min, max, alphabet, stoplist):
@@ -134,9 +133,11 @@ class NGram:
 
 class Poem:
     """A 2-dim array of PWords performing formulaic analysis on initialisation."""
-    def __init__(self, fileObj, alphabet, stoplist):
+    def __init__(self, fileObj, alphabet, stoplist, keylength, nRepetitions):
         self.alphabet = alphabet
         self.stoplist = stoplist
+        self.keylength = keylength
+        self.nRepetitions = nRepetitions
         self.pWordArr = []
         self.allKeys  = []
         self.allKeysSet = set()
@@ -157,7 +158,7 @@ class Poem:
             self.pWordArr.append(lineArr)
             for nGram in makeNGrams(lineArr, 2, 14, self.alphabet, self.stoplist):
                 numericKey = len(nGram)
-                key = makeKey(nGram)
+                key = makeKey(nGram, self.keylength)
                 if numericKey not in nGramsByLength:
                     nGramsByLength[numericKey] = []
                 if key not in self.allKeysSet:
@@ -173,7 +174,7 @@ class Poem:
     def extractFormulas(self):
         """Extract formulas from the dictionary."""
         for key in self.allKeys:
-            if len(self.nGramMap[key]) < 2:
+            if len(self.nGramMap[key]) < self.nRepetitions:
                 continue
             candidates = self.nGramMap[key]
             temp       = []
@@ -188,7 +189,7 @@ class Poem:
                 if not candidates[i].isBlocked():
                     temp.append(candidates[i])
                     candidates[i].block()
-            if len(temp) > 1:
+            if len(temp) >= self.nRepetitions:
                 self.formulas[key] = []
                 self.formulas[key].extend(temp)
                 for nGram in temp:
@@ -200,8 +201,9 @@ class Poem:
                         id(nGram.pwords[-1]
                             )
                         )
-            elif len(temp) == 1:
-                temp[0].unblock()
+            elif len(temp) > 0:
+                for nGram in temp:
+                    nGram.unblock()
 
     def computeFormulaicDensity(self):
         allWordsN  = 0
@@ -228,18 +230,47 @@ class Poem:
 
     def highlightFormulas(self, filename):
         """Prints formulas to an html file."""
+        def _make_key(formula):
+            formula = formula[1:-1].split()
+            key = []
+            for word in formula:
+                key.append(word.lower()[:4])
+            return ''.join(key)
+        lines = []
+        for line in self.pWordArr:
+            temp = []
+            for i in range(len(line)):
+                if id(line[i]) in self.firstWords:
+                    temp.append("[" + line[i].word)
+                elif id(line[i]) in self.lastWords:
+                    temp.append(line[i].word + "] ")
+                else:
+                    temp.append(line[i].word)
+            lines.append(' '.join(temp))
+        f_p = re.compile(r'\[[^\[\]]+?\]')
+        lines_n = list(enumerate(lines, start = 1))
+        formula_lines = {}
+        for pair in lines_n:
+            line = pair[1]
+            for mobj in f_p.finditer(line):
+                key = _make_key(mobj.group(0))
+                if key not in formula_lines:
+                    formula_lines[key] = []
+                formula_lines[key].append(pair[0])
         with open(filename, "w", encoding = "utf-8") as out:
-            out.write('<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head><body>\n')
-            for line in self.pWordArr:
-                for i in range(len(line)):
-                    if id(line[i]) in self.firstWords:
-                        out.write("[" + line[i].word + " ")
-                    elif id(line[i]) in self.lastWords:
-                        out.write(line[i].word + "] ")
-                    else:
-                        out.write(line[i].word + " ")
-                out.write("<br>\n")
-            out.write("</body></html>\n")
+            out.write('<html><head><meta http-equiv="Content-Type" content="text/html; charset=UTF-8"></head><body><table border=0>\n')
+            for pair in lines_n:
+                out.write('<tr>')
+                out.write('<td>%s</td>' % str(pair[0]))
+                out.write('<td>%s</td>' % str(pair[1]))
+                refs = []
+                for mobj in f_p.finditer(pair[1]):
+                    key = _make_key(mobj.group(0))
+                    if key in formula_lines:
+                        refs.append(', '.join([str(el) for el in formula_lines[key] if el != pair[0]]))
+                out.write('<td>%s</td>' % '; '.join(refs))
+                out.write('</tr>')
+            out.write("</table></body></html>\n")
 
 # Client code.
 
