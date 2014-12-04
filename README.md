@@ -6,7 +6,7 @@ There is a deep seated bug in the old version, but I keep it here since it was u
 
 The program consists of four files, which should reside in the same directory.
 
-FormulaicAnalysisLib.py is a library containing classes and functions implementing the algorithm.
+```FormulaicAnalysisLib.py``` is a library containing classes and functions implementing the algorithm.
 
 ```alpha_stop.conf``` is a configuration file containing the alphabet, the stop list, the formulaic key length, and the number of occurrences, which make a repeated N-gram qualify as a formula. All these parameters, except stop-list, must be non-empty.
 
