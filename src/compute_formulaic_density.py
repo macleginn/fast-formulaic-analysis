@@ -3,12 +3,13 @@
 # This is the client code for FormulaicAnalysisLib.py,
 # which is presumed to be present in the same directory.
 # Usage: python3 compute_formulaic_density.py [options] pathToFileWithText
-# If path is a directory, a random file therefrom will
+# If the path is a directory, a random file therefrom will
 # be selected (use compute_formulaic_density_batch.py for
 # large-scale analyses).
 # Options include -s (show formulas on the screen) and -f
 # (create an html file with the text with formulas in square
-# brackets). These arguments can be used separately or combined as -sf or -fs.
+# brackets and cross-references). These arguments can be used separately
+# or combined as -sf or -fs.
 # The alphabet and stop-list for the analysis are taken from
 # alpha_stop.conf. Russian, Anglo-Saxon, and Homeric Greek data
 # are already provided there; un-comment relevant lines.
@@ -74,9 +75,6 @@ except FileNotFoundError:
 if not ALPHABET:
     print('Error: unable to recover alphabet from the configuration file')
     sys.exit(1)
-if not STOP_LIST:
-    print('Error: unable to recover stop-list from the configuration file')
-    sys.exit(1)
 if KEY_LENGTH == None:
     print('Error: unable to recover key length from the configuration file')
     sys.exit(1)
@@ -121,7 +119,7 @@ print(round(poem.getFormulaicDensity(), 1))
 if show_formulas_on_screen:
     print(poem.returnFormulasAsString())
 if output_to_html:
-    filename = os.path.basename(final_path)
+    filename = 'html_out/' + os.path.basename(final_path)
     dot_index = filename.rfind('.')
     if dot_index == -1:
         filename += '.html'

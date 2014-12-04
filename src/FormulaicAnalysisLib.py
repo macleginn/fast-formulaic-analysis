@@ -153,7 +153,11 @@ class Poem:
     def populate(self, fileObj):
         """Populates the pword array and the nGram dictionary."""
         nGramsByLength = {}
+        firstLine = True
         for line in fileObj:
+            if firstLine:
+                firstLine = not firstLine
+                continue
             lineArr = extractPWords(line, self.alphabet)
             self.pWordArr.append(lineArr)
             for nGram in makeNGrams(lineArr, 2, 14, self.alphabet, self.stoplist):
@@ -228,6 +232,16 @@ class Poem:
                 out.append(formulas)
         return("\n".join(out))
 
+    def getRepetitionDistribution(self):
+        result = {}
+        for key in self.allKeys:
+            if key in self.formulas:
+                try:
+                    result[len(self.formulas[key])] += 1
+                except KeyError:
+                    result[len(self.formulas[key])] = 1
+        return result
+
     def highlightFormulas(self, filename):
         """Prints formulas to an html file."""
         def _make_key(formula):
@@ -271,6 +285,59 @@ class Poem:
                 out.write('<td>%s</td>' % '; '.join(refs))
                 out.write('</tr>')
             out.write("</table></body></html>\n")
+
+    def makeLocalityGraph(self, type = 0):
+        """Returns a graph (n_vertices + list of edges) version of a report created by highlightFormulas.
+
+        Three types are
+        0 default graph (all edges)
+        1 common-formula graph (add edges from formulas with more than 2 occurrences)
+        2 singleton formula graph (add edges from formulas with only 2 occurrences)"""
+
+        def _make_key(formula):
+            formula = formula[1:-1].split()
+            key = []
+            for word in formula:
+                key.append(word.lower()[:4])
+            return ''.join(key)
+        lines = []
+        for line in self.pWordArr[1:]: # Ignore first lines: always a title in bylinas.
+            temp = []
+            for i in range(len(line)):
+                if id(line[i]) in self.firstWords:
+                    temp.append("[" + line[i].word)
+                elif id(line[i]) in self.lastWords:
+                    temp.append(line[i].word + "] ")
+                else:
+                    temp.append(line[i].word)
+            lines.append(' '.join(temp))
+        f_p = re.compile(r'\[[^\[\]]+?\]')
+        lines_n = list(enumerate(lines, start = 1))
+        n_vertices = lines_n[-1][0]
+        formula_lines = {}
+        for pair in lines_n:
+            line = pair[1]
+            for mobj in f_p.finditer(line):
+                key = _make_key(mobj.group(0))
+                if key not in formula_lines:
+                    formula_lines[key] = []
+                formula_lines[key].append(pair[0])
+        edges = []
+        for pair in lines_n:
+            for mobj in f_p.finditer(pair[1]):
+                key = _make_key(mobj.group(0))
+                if pair[0] < formula_lines[key][-1]:
+                    i = formula_lines[key].index(pair[0])
+                    if type == 0:
+                        edges.append((formula_lines[key][i], formula_lines[key][i+1]))
+                    elif type == 1:
+                        if len(formula_lines[key]) > 2:
+                            edges.append((formula_lines[key][i], formula_lines[key][i+1]))
+                    else:
+                        if len(formula_lines[key]) == 2:
+                            edges.append((formula_lines[key][i], formula_lines[key][i+1]))
+        return n_vertices, edges
+
 
 # Client code.
 
